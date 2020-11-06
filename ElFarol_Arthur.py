@@ -216,7 +216,7 @@ def simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, c
             for a in bar.agentes:
                 print(a)
     data = bar.crea_dataframe_agentes()
-    guardar(data, 'simulacion-' + str(long_memoria) + '-' + str(num_predictores) + str(conectividad) +'.csv', inicial)
+    guardar(data, 'simulacion-' + str(long_memoria) + '-' + str(num_predictores) + '-' + str(conectividad) +'.csv', inicial)
     # guardar(data, 'agentes.csv', inicial)
 
 def correr_sweep(num_experimentos, num_agentes, umbral, num_rondas):
@@ -227,6 +227,7 @@ def correr_sweep(num_experimentos, num_agentes, umbral, num_rondas):
     memoria = [1, 3, 6, 9, 12, 15, 18]
     predictores = [1, 3, 6, 9, 12]
     conectividades = [0.01 * x for x in range(10)] + [0.1 * x for x in range(1, 11)]
+    conectividades = [round(x, 2) for x in conectividades]
     inicial = True
     identificador = 0
     for d in memoria:
