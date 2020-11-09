@@ -7,7 +7,7 @@ import sys, math
 def guardar_imagen(n_vertices, identificador=''):
     g = ig.Graph()
     g.add_vertices(n_vertices)
-    g = ig.Graph.Read_Edgelist('./data/redes/connlist.dat')
+    g = ig.Graph.Read_Edgelist('./data/redes/connlist-' + str(identificador) + '.dat')
     ig.plot(g,'imagenes/red.png')
 
 def random_graph(N, p, imagen=True, identificador=''):
@@ -43,8 +43,8 @@ def random_graph(N, p, imagen=True, identificador=''):
     # print(lnkcnt)
     # print(float(sum(lnkcnt))/N)
 
-    aux = '-' if identificador != '' else ''
-    ff = open('./data/redes/connlist' + aux + str(identificador) + '.dat', 'w')
+    aux = '-' + str(identificador) if identificador != '' else ''
+    ff = open('./data/redes/connlist' + aux + '.dat', 'w')
     for i in range(len(llinks)):
         # print("printing link")
         ff.write(str(llinks[i][0])+" "+str(llinks[i][1])+"\n")
@@ -55,10 +55,10 @@ def random_graph(N, p, imagen=True, identificador=''):
     for i in lnkcnt:
         hist[i] += 1
 
-    hf = open('./data/redes/deg_hist-' + str(identificador) + '.dat', 'w')
-    for i in range(N):
-        hf.write(str(i)+' '+str(hist[i])+'\n')
-    hf.close()
+    # hf = open('./data/redes/deg_hist-' + str(identificador) + '.dat', 'w')
+    # for i in range(N):
+    #     hf.write(str(i)+' '+str(hist[i])+'\n')
+    # hf.close()
 
     if imagen:
         guardar_imagen(N, identificador=identificador)
