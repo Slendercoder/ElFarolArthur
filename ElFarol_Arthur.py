@@ -141,18 +141,81 @@ class Bar:
             precision = [distancia(historia[i + 1], predicciones[i]) for i in range(len(historia) - 1)]
             p.precision = np.mean(precision)
 
-    def escoger_predictor(self):
+    def escoger_predictor(self, DEB=False):
         for a in self.agentes:
             precisiones = [p.precision for p in a.predictores]
             index_min = np.argmin(precisiones)
+            if DEB:
+                print("Las precisiones son:")
+                print([f"{str(p)} : {p.precision}" for p in a.predictores])
             a.predictor_activo.append(a.predictores[index_min])
+
+    def copiar_a_vecinos(self, agente, DEB=False):
+        # Obtener atributos agente para despues copiar
+        estados = [e for e in agente.estado]
+        scores = [s for s in agente.score]
+        vecinos = [v for v in agente.vecinos]
+        predictores = [p for p in agente.predictores]
+        predictor_activo = [p for p in agente.predictor_activo]
+        # Datos para buscar mejor predictor en vecinos
+        predictor = agente.predictor_activo[-1]
+        minimo = predictor.precision
+        minimo_vecino = self.agentes.index(agente)
+        precisiones_vecinos = [self.agentes[index_vecino].predictor_activo[-1].precision for index_vecino in agente.vecinos]
+        if len(precisiones_vecinos) > 0:
+            if DEB:
+                print("Considerando agente", minimo_vecino)
+                print(agente)
+                print("Precision de agente:", minimo, end = "")
+                print(" Precision de los vecinos:", precisiones_vecinos)
+            if min(precisiones_vecinos) < minimo:
+                # Eliminar peor predictor del agente
+                precisiones = [p.precision for p in agente.predictores]
+                index_max = np.argmax(precisiones)
+                if DEB:
+                    print("Precisiones del agente:", precisiones, "La peor es", index_max)
+                del predictores[index_max]
+                # Añadir mejor predictor de los vecinos
+                minimo_vecino = agente.vecinos[np.argmin(precisiones_vecinos)]
+                predictor = self.agentes[minimo_vecino].predictor_activo[-1]
+                predictores.append(predictor)
+                if DEB:
+                    print('Se imita el predictor', predictor, 'del vecino', minimo_vecino)
+            else:
+                if DEB:
+                    print('Agente', minimo_vecino, 'no tiene vecinos con mejor precision.')
+        else:
+            if DEB:
+                print('Agente', minimo_vecino, 'no tiene vecinos.')
+        predictor_activo[-1] = predictor
+        return Agente(estados, scores, vecinos, predictores, predictor_activo)
+
+
+    def agentes_aprenden(self, ronda=0, n=0, DEB=False):
+        # Dejamos n rondas para probar la política escogida
+        # En otras palabras, no hay aprendizaje por n rondas.
+        # Los agentes copian la politica del vecino con mayor
+        # puntaje acumulado en las n rondas. Si n<2, se aprende cada ronda.
+        if (n < 2) or (ronda % n == 0):
+            Agentes = []
+            for agente in self.agentes:
+                agente_dummy = self.copiar_a_vecinos(agente, DEB=DEB)
+                Agentes.append(agente_dummy)
+            self.agentes = Agentes
+        else:
+            if DEB:
+                print("Esta ronda los agentes no aprenden.")
 
     def juega_ronda(self):
         self.calcular_estados()
         self.calcular_asistencia()
         self.calcular_puntajes()
         self.actualizar_precision()
-        self.escoger_predictor()
+        for p in self.predictores:
+            print(f"Predictor: {str(p)} - Prediccion: {p.prediccion} - Precision: {p.precision}")
+        print("****************************")
+        self.escoger_predictor(DEB=True)
+        self.agentes_aprenden(DEB=True)
         self.actualizar_predicciones()
 
     def crea_dataframe_agentes(self):
@@ -198,19 +261,19 @@ def guardar(dataFrame, archivo, inicial):
 def simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, conectividad, inicial=True, identificador='', DEB=False):
     bar = Bar(num_agentes, umbral, long_memoria, num_predictores, conectividad, identificador)
     if DEB:
-        print("****************************")
+        print("**********************************")
         print("Agentes iniciales:")
         for a in bar.agentes:
             print(a)
-        print("****************************")
+        print("**********************************")
         print("")
     for i in range(num_rondas):
         if DEB:
             print("Ronda", i)
             print("Historia:", bar.historia)
-            for p in bar.predictores:
-                print(f"Predictor: {str(p)} - Prediccion: {p.prediccion} - Precision: {p.precision}")
-            print("****************************")
+            # for p in bar.predictores:
+            #     print(f"Predictor: {str(p)} - Prediccion: {p.prediccion} - Precision: {p.precision}")
+            # print("****************************")
         bar.juega_ronda()
         if DEB:
             for a in bar.agentes:
@@ -219,7 +282,7 @@ def simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, c
     guardar(data, 'simulacion-' + str(long_memoria) + '-' + str(num_predictores) + '-' + str(conectividad) +'.csv', inicial)
     # guardar(data, 'agentes.csv', inicial)
 
-def correr_sweep(num_experimentos, num_agentes, umbral, num_rondas):
+def correr_sweep(num_experimentos, num_agentes, umbral, num_rondas, DEB=False):
     print('********************************')
     print('Corriendo simulaciones...')
     print('********************************')
@@ -238,15 +301,18 @@ def correr_sweep(num_experimentos, num_agentes, umbral, num_rondas):
                     print('Memoria:', d, 'Predictores:', k, 'Conectividad:', p)
                     for i in range(num_experimentos):
                         redes.random_graph(num_agentes, p, imagen=False, identificador=identificador)
-                        simulacion(num_agentes, umbral, d, k, num_rondas, p, inicial=inicial, identificador=identificador)
+                        simulacion(num_agentes, umbral, d, k, num_rondas, p, inicial=inicial, identificador=identificador, DEB=DEB)
                         identificador += 1
                         inicial = False
 ####################################
 
 num_agentes = 100
 umbral = .6
-# long_memoria = 5 # Longitud de la historia
-# num_predictores = 1 # Cantidad de predictores en la bolsa de cada agente
 num_rondas = 100
 num_experimentos = 100
-correr_sweep(num_experimentos, num_agentes, umbral, num_rondas)
+correr_sweep(num_experimentos, num_agentes, umbral, num_rondas, DEB=True)
+# long_memoria = 3 # Longitud de la historia
+# num_predictores = 3 # Cantidad de predictores en la bolsa de cada agente
+# conectividad = 1
+# redes.random_graph(num_agentes, conectividad, imagen=False)
+# simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, conectividad, DEB=True)
