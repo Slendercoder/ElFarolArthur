@@ -212,7 +212,7 @@ class Bar:
         self.calcular_puntajes()
         self.actualizar_precision()
         for p in self.predictores:
-            print(f"Predictor: {str(p)} - Prediccion: {p.prediccion} - Precision: {p.precision}")
+            print(f"Predictor: {str(p)} - Prediccion: {p.prediccion} - Precision: {p.precision}")
         print("****************************")
         self.escoger_predictor(DEB=True)
         self.agentes_aprenden(DEB=True)
