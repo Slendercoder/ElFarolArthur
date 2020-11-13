@@ -236,8 +236,8 @@ class Bar:
                                     'Agente': agente,\
                                     'Estado': estado,\
                                     'Puntaje': puntaje,\
-                                    'Politica': politica\,
-                                    'Precision': precision\,
+                                    'Politica': politica,\
+                                    'Precision': precision,\
                                     'Prediccion': prediccion\
                                     })
 
