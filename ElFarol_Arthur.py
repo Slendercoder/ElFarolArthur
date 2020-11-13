@@ -9,12 +9,11 @@ def distancia(x, y):
     return abs(x - y)
 
 class Predictor:
-    def __init__(self, long_memoria, num_agentes):
+    def __init__(self, long_memoria):
         self.ventana = randint(1, long_memoria)
         self.ciclico = choice([True, False])
         self.espejo = choice([True, False])
-        # self.codigo = str(self.ventana) + "-" + str(self.ciclico) + "-" + str(self.espejo)
-        self.precision = 0
+        self.precision = [np.nan]
         self.prediccion = []
 
     def predecir(self, memoria, num_agentes):
@@ -36,10 +35,6 @@ class Predictor:
         if espejo:
             prediccion = num_agentes - prediccion
         self.prediccion.append(prediccion)
-        # print(self)
-        # print("Memoria para tomar decision:", memoria)
-        # print("Valores:", valores)
-        # print("Prediccion:", prediccion)
 
     def __str__(self):
         ventana = str(self.ventana)
@@ -69,7 +64,7 @@ class Bar:
         self.historia = []
         self.predictores = []
         for i in range(100):
-            p = Predictor(self.long_memoria, self.num_agentes)
+            p = Predictor(self.long_memoria + 10)
             if str(p) not in [str(pr) for pr in self.predictores]:
                 self.predictores.append(p)
         self.agentes = []
@@ -139,7 +134,7 @@ class Bar:
             predicciones = p.prediccion[-self.long_memoria:]
             # print("Historia vs prediccion", historia, predicciones)
             precision = [distancia(historia[i + 1], predicciones[i]) for i in range(len(historia) - 1)]
-            p.precision = np.mean(precision)
+            p.precision.append[np.mean(precision)]
 
     def escoger_predictor(self, DEB=False):
         for a in self.agentes:
@@ -190,7 +185,6 @@ class Bar:
         predictor_activo[-1] = predictor
         return Agente(estados, scores, vecinos, predictores, predictor_activo)
 
-
     def agentes_aprenden(self, ronda=0, n=0, DEB=False):
         # Dejamos n rondas para probar la política escogida
         # En otras palabras, no hay aprendizaje por n rondas.
@@ -224,6 +218,8 @@ class Bar:
         estado = []
         puntaje = []
         politica = []
+        prediccion = []
+        precision = []
         num_iteraciones = len(self.historia) - 1
         for i in range(self.num_agentes):
             for r in range(num_iteraciones):
@@ -232,13 +228,17 @@ class Bar:
                 estado.append(self.agentes[i].estado[r])
                 puntaje.append(self.agentes[i].score[r])
                 politica.append(str(self.agentes[i].predictor_activo[r]))
+                prediccion.append(self.agentes[i].predictor_activo[r].prediccion[r])
+                precision.append(self.agentes[i].predictor_activo[r].precision[r])
         data = pd.DataFrame.from_dict(\
                                     {\
                                     'Ronda': ronda,\
                                     'Agente': agente,\
                                     'Estado': estado,\
                                     'Puntaje': puntaje,\
-                                    'Politica': politica\
+                                    'Politica': politica\,
+                                    'Precision': precision\,
+                                    'Prediccion': prediccion\
                                     })
 
         id = self.identificador if self.identificador != '' else 'A'
@@ -246,7 +246,8 @@ class Bar:
         data['Memoria'] = self.long_memoria
         data['Num_predic'] = self.num_predictores
         data['Conectividad'] = self.conectividad
-        data = data[['Memoria', 'Num_predic', 'Identificador','Ronda','Agente','Estado','Puntaje','Politica']]
+        data = data[['Memoria', 'Num_predic', 'Identificador','Ronda','Agente',\
+                     'Estado','Puntaje','Politica','Prediccion', 'Precision']]
         return data
 
 def guardar(dataFrame, archivo, inicial):
@@ -287,9 +288,9 @@ def correr_sweep(num_experimentos, num_agentes, umbral, num_rondas, DEB=False):
     print('Corriendo simulaciones...')
     print('********************************')
     print("")
-    memoria = [1, 3, 6, 9, 12, 15, 18]
+    memoria = [1, 3, 6, 9, 12]
     predictores = [1, 3, 6, 9, 12]
-    conectividades = [0.01 * x for x in range(10)] + [0.1 * x for x in range(1, 11)]
+    conectividades = [0, 0.004, 0.006, 0.008, 0.01, 0.012, 0.03, 0.05, 0.1, 0.0.5, 1]
     conectividades = [round(x, 2) for x in conectividades]
     inicial = True
     identificador = 0
