@@ -133,12 +133,12 @@ class Bar:
         for p in self.predictores:
             predicciones = p.prediccion[-self.long_memoria:]
             # print("Historia vs prediccion", historia, predicciones)
-            precision = [distancia(historia[i + 1], predicciones[i]) for i in range(len(historia) - 1)]
-            p.precision.append[np.mean(precision)]
+            precision_historia = [distancia(historia[i + 1], predicciones[i]) for i in range(len(historia) - 1)]
+            p.precision.append(np.mean(precision_historia))
 
     def escoger_predictor(self, DEB=False):
         for a in self.agentes:
-            precisiones = [p.precision for p in a.predictores]
+            precisiones = [p.precision[-1] for p in a.predictores]
             index_min = np.argmin(precisiones)
             if DEB:
                 print("Las precisiones son:")
@@ -156,7 +156,7 @@ class Bar:
         predictor = agente.predictor_activo[-1]
         minimo = predictor.precision
         minimo_vecino = self.agentes.index(agente)
-        precisiones_vecinos = [self.agentes[index_vecino].predictor_activo[-1].precision for index_vecino in agente.vecinos]
+        precisiones_vecinos = [self.agentes[index_vecino].predictor_activo[-1].precision[-1] for index_vecino in agente.vecinos]
         if len(precisiones_vecinos) > 0:
             if DEB:
                 print("Considerando agente", minimo_vecino)
@@ -165,7 +165,7 @@ class Bar:
                 print(" Precision de los vecinos:", precisiones_vecinos)
             if min(precisiones_vecinos) < minimo:
                 # Eliminar peor predictor del agente
-                precisiones = [p.precision for p in agente.predictores]
+                precisiones = [p.precision[-1] for p in agente.predictores]
                 index_max = np.argmax(precisiones)
                 if DEB:
                     print("Precisiones del agente:", precisiones, "La peor es", index_max)
@@ -283,18 +283,14 @@ def simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, c
     guardar(data, 'simulacion-' + str(long_memoria) + '-' + str(num_predictores) + '-' + str(conectividad) +'.csv', inicial)
     # guardar(data, 'agentes.csv', inicial)
 
-def correr_sweep(num_experimentos, num_agentes, umbral, num_rondas, DEB=False):
+def correr_sweep(memorias, predictores, conectividades, num_experimentos, num_agentes, umbral, num_rondas, DEB=False):
     print('********************************')
     print('Corriendo simulaciones...')
     print('********************************')
     print("")
-    memoria = [1, 3, 6, 9, 12]
-    predictores = [1, 3, 6, 9, 12]
-    conectividades = [0, 0.004, 0.006, 0.008, 0.01, 0.012, 0.03, 0.05, 0.1, 0.0.5, 1]
-    conectividades = [round(x, 2) for x in conectividades]
     inicial = True
     identificador = 0
-    for d in memoria:
+    for d in memorias:
         for k in predictores:
             if k <= d:
                 for p in conectividades:
@@ -305,15 +301,3 @@ def correr_sweep(num_experimentos, num_agentes, umbral, num_rondas, DEB=False):
                         simulacion(num_agentes, umbral, d, k, num_rondas, p, inicial=inicial, identificador=identificador, DEB=DEB)
                         identificador += 1
                         inicial = False
-####################################
-
-num_agentes = 100
-umbral = .6
-num_rondas = 100
-num_experimentos = 100
-correr_sweep(num_experimentos, num_agentes, umbral, num_rondas, DEB=True)
-# long_memoria = 3 # Longitud de la historia
-# num_predictores = 3 # Cantidad de predictores en la bolsa de cada agente
-# conectividad = 1
-# redes.random_graph(num_agentes, conectividad, imagen=False)
-# simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, conectividad, DEB=True)
