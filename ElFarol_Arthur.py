@@ -48,7 +48,7 @@ class Agente:
         self.score = scores # lista
         self.vecinos = vecinos # lista
         self.predictores = predictores # lista
-        self.predictor_activo = predictor_activo
+        self.predictor_activo = predictor_activo # lista
 
     def __str__(self):
         return "E:{0}, S:{1}, V:{2}, P:{3}".format(self.estado, self.score, self.vecinos, str(self.predictor_activo[-1]))
@@ -140,9 +140,9 @@ class Bar:
         for a in self.agentes:
             precisiones = [p.precision[-1] for p in a.predictores]
             index_min = np.argmin(precisiones)
-            if DEB:
-                print("Las precisiones son:")
-                print([f"{str(p)} : {p.precision}" for p in a.predictores])
+            # if DEB:
+            #     print("Las precisiones son:")
+            #     print([f"{str(p)} : {p.precision[-1]}" for p in a.predictores])
             a.predictor_activo.append(a.predictores[index_min])
 
     def copiar_a_vecinos(self, agente, DEB=False):
@@ -154,7 +154,7 @@ class Bar:
         predictor_activo = [p for p in agente.predictor_activo]
         # Datos para buscar mejor predictor en vecinos
         predictor = agente.predictor_activo[-1]
-        minimo = predictor.precision
+        minimo = predictor.precision[-1]
         minimo_vecino = self.agentes.index(agente)
         precisiones_vecinos = [self.agentes[index_vecino].predictor_activo[-1].precision[-1] for index_vecino in agente.vecinos]
         if len(precisiones_vecinos) > 0:
@@ -200,16 +200,16 @@ class Bar:
             if DEB:
                 print("Esta ronda los agentes no aprenden.")
 
-    def juega_ronda(self):
+    def juega_ronda(self, ronda):
         self.calcular_estados()
         self.calcular_asistencia()
         self.calcular_puntajes()
         self.actualizar_precision()
-        for p in self.predictores:
-            print(f"Predictor: {str(p)} - Prediccion: {p.prediccion} - Precision: {p.precision}")
-        print("****************************")
+        # for p in self.predictores:
+        #     print(f"Predictor: {str(p)} - Prediccion: {p.prediccion[-1]} - Precision: {p.precision[-1]}")
+        # print("****************************")
         self.escoger_predictor(DEB=True)
-        self.agentes_aprenden(DEB=True)
+        self.agentes_aprenden(ronda=ronda, n=5, DEB=True)
         self.actualizar_predicciones()
 
     def crea_dataframe_agentes(self):
@@ -275,7 +275,7 @@ def simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, c
             # for p in bar.predictores:
             #     print(f"Predictor: {str(p)} - Prediccion: {p.prediccion} - Precision: {p.precision}")
             # print("****************************")
-        bar.juega_ronda()
+        bar.juega_ronda(i + 1)
         if DEB:
             for a in bar.agentes:
                 print(a)

@@ -8,4 +8,4 @@ num_agentes = 100
 umbral = .6
 num_rondas = 100
 
-E.correr_sweep(memorias, predictores, conectividades, num_experimentos, num_agentes, umbral, num_rondas, DEB=True)
+E.correr_sweep(memorias, predictores, conectividades, num_experimentos, num_agentes, umbral, num_rondas, DEB=False)
