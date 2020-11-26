@@ -2,7 +2,7 @@ import ElFarol_Arthur as E
 
 memorias = [1, 3, 6, 9, 12]
 predictores = [1, 3, 6, 9, 12]
-conectividades = [0.1, 0.0.5, 1]
+conectividades = [0.1, 0.5, 1]
 num_experimentos = 100
 num_agentes = 100
 umbral = .6
