@@ -12,7 +12,8 @@ class Predictor:
     def __init__(self, long_memoria):
         self.ventana = randint(1, long_memoria)
         self.ciclico = choice([True, False])
-        self.espejo = choice([True, False])
+        # self.espejo = choice([True, False])
+        self.espejo = False
         self.precision = [np.nan]
         self.prediccion = []
 
@@ -280,7 +281,7 @@ def simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, c
             for a in bar.agentes:
                 print(a)
     data = bar.crea_dataframe_agentes()
-    guardar(data, 'simulacion-' + str(long_memoria) + '-' + str(num_predictores) + '-' + str(conectividad) +'.csv', inicial)
+    guardar(data, 'simulacion-' + str(long_memoria) + '-' + str(num_predictores) + '-' + str(conectividad) +'-no-espejo.csv', inicial)
     # guardar(data, 'agentes.csv', inicial)
 
 def correr_sweep(memorias, predictores, conectividades, num_experimentos, num_agentes, umbral, num_rondas, DEB=False):
