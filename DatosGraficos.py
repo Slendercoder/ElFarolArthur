@@ -3,14 +3,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def leer_datos(memorias, predictores, conectividades):
+def leer_datos(memorias, predictores, conectividades, espejos=True):
     names = ['Memoria', 'Num_predic', 'Identificador', 'Ronda', 'Agente', 'Estado', 'Puntaje', 'Politica', 'Prediccion', 'Precision']
     df_list = []
     for d in memorias:
         for k in predictores:
             for p in conectividades:
                 print(f"Leyendo datos sweep memoria {d} predictores {k} y conectividad {p}")
-                archivo = './data/simulacion-' + str(d) + "-" + str(k) + '-' + str(p) + ".csv"
+                if espejos:
+                    archivo = './data/simulacion-' + str(d) + "-" + str(k) + '-' + str(p) + ".csv"
+                else:
+                    archivo = './data/simulacion-' + str(d) + "-" + str(k) + '-' + str(p) + "-no-espejo.csv"
                 print(f"Cargando datos de archivo {archivo}...")
                 try:
                     aux = pd.read_csv(archivo, names=names, header=None)
@@ -69,10 +72,9 @@ def dibuja_asistencia_vs(data, variable='Memoria'):
                    'Identificador',
                    'Ronda',
                    'Asistencia_total']
-
     aux['Asistencia_total'] = (aux['Asistencia_total']/Numero_agentes)*100
     rondas = aux['Ronda'].unique()
-    aux1 = aux[aux['Ronda'] > rondas[-5]]
+    aux1 = aux[aux['Ronda'] > rondas[-75]]
     aux1 = aux1.groupby([variable, 'Identificador'])['Asistencia_total']\
         .mean().reset_index()
     aux1.columns = [variable,
@@ -87,17 +89,13 @@ def dibuja_asistencia_vs(data, variable='Memoria'):
     ax[0].set_ylabel('Asistencia promedio')
     ax[0].set_title('Asistencia promedio por ronda')
     ax[1].set_xlabel(variable)
-    ax[1].set_ylabel('Asistencia últimas 5 rondas')
-    ax[1].set_title('Distribución asistencia en las últimas 5 rondas')
+    ax[1].set_ylabel('Asistencia últimas 75 rondas')
+    ax[1].set_title('Distribución asistencia en las últimas 75 rondas')
 
 def dibujar_puntaje_vs(data, variable):
     fig, ax = plt.subplots(2,1,figsize=(8,8))
     data_aux = data.groupby([variable, 'Identificador'])['Puntaje'].mean().reset_index()
-    sns.boxplot(
-        x=data_aux[variable],
-        y=data_aux['Puntaje'],
-        ax=ax[0]
-    )
+    sns.boxplot(x=variable, y='Puntaje', data=data_aux, ax=ax[0])
     df = data.groupby([variable, 'Identificador', 'Agente'])['Puntaje'].mean().reset_index()
     for key, grp in df.groupby(variable):
         sns.distplot(grp['Puntaje'], ax=ax[1], label=key)
@@ -124,3 +122,45 @@ def dibuja_puntajepredictor_vs(data, variable):
         sns.swarmplot(x=grp['Politica_lag'], y=grp['Puntaje'])
         fig.suptitle(variable + ': ' + str(p), fontsize=14)
         plt.xticks(rotation=90)
+
+def dibuja_vs(data, variable):
+    data1 = pd.DataFrame(data[data['Ronda']>25])
+    Numero_agentes = max(data1['Agente']) + 1
+    aux = data1.groupby([variable, 'Identificador', 'Ronda'])['Estado']\
+        .sum().reset_index()
+    aux.columns = [variable,
+                   'Identificador',
+                   'Ronda',
+                   'Asistencia_total']
+    aux['Asistencia_total'] = (aux['Asistencia_total']/Numero_agentes)*100
+    rondas = aux['Ronda'].unique()
+    aux1 = aux.groupby([variable, 'Identificador'])['Asistencia_total']\
+        .mean().reset_index()
+    aux1.columns = [variable,
+                   'Identificador',
+                   'Asistencia_total']
+    data_aux = data1.groupby([variable, 'Identificador'])['Puntaje'].mean().reset_index()
+    aux2 = aux.groupby([variable, 'Identificador'])['Asistencia_total']\
+        .std().reset_index()
+    aux2.columns = [variable,
+                   'Identificador',
+                   'Std_Asistencia_total']
+    fig, ax = plt.subplots(3,1,figsize=(7,12))
+    sns.boxplot(x=aux1[variable], y=aux1['Asistencia_total'], ax=ax[0], color='blue')
+    sns.boxplot(x=variable, y='Std_Asistencia_total', data=aux2, ax=ax[1], color='cyan')
+    sns.boxplot(x=variable, y='Puntaje', data=data_aux, ax=ax[2], color='red')
+    if variable == 'Memoria':  
+        ax[2].set_xlabel('Memory')
+    elif variable == 'Num_predic':
+        ax[2].set_xlabel('Number of predictors')
+    elif variable == 'Conectividad':
+        ax[2].set_xlabel('Connectivity')
+    ax[0].set_xlabel('')
+    ax[1].set_xlabel('')
+    ax[0].set_ylabel('Attendance')
+    ax[0].set_title('Distribution of attendance')
+    ax[1].set_title('Distribution of Standard\n deviation of Attendance')
+    ax[1].set_ylabel('Std. Attendance')
+    ax[2].set_ylabel('Score')
+    ax[2].set_title('Distribution of score')
+    fig.tight_layout()
