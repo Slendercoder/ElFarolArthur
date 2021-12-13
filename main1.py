@@ -1,6 +1,6 @@
 import ElFarol_Arthur as E
 
-memorias = [1, 3, 6, 9, 12]
+memorias = [0, 1, 3, 6, 9, 12]
 predictores = [1, 3, 6, 9, 12]
 conectividades = [0, 0.004]
 num_experimentos = 100

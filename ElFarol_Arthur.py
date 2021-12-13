@@ -1,47 +1,60 @@
 print("Importando paquetes...")
-from random import choice, sample, randint
+from random import choice, sample, randint, uniform
 import numpy as np
 import pandas as pd
 import redes
+from os import remove
 print("Listo!")
 
 def distancia(x, y):
     return abs(x - y)
 
 class Predictor:
-    def __init__(self, long_memoria):
-        self.ventana = randint(1, long_memoria)
+    def __init__(self, long_memoria, indicador, espejos):
+        if long_memoria < 1:
+        	self.ventana = 0
+        else:
+        	self.ventana = randint(1, long_memoria)
         self.ciclico = choice([True, False])
-        # self.espejo = choice([True, False])
-        self.espejo = False
+        if espejos:
+        	self.espejo = choice([True, False])
+        else:
+        	self.espejo = False
         self.precision = [np.nan]
         self.prediccion = []
+        self.indicador = indicador
 
-    def predecir(self, memoria, num_agentes):
+    def predecir(self, memoria, num_agentes, umbral):
         long_memoria = len(memoria)
         ciclico = self.ciclico
         ventana = self.ventana
         espejo = self.espejo
-        if ciclico:
-            # indices = list(range(long_memoria - retardo, -1, -retardo))
-            indices = list(range(long_memoria - 1, -1, -ventana))
-            valores = [memoria[x] for x in indices]
+        if ventana > 0:
+	        if ciclico:
+	            # indices = list(range(long_memoria - retardo, -1, -retardo))
+	            indices = list(range(long_memoria - 1, -1, -ventana))
+	            valores = [memoria[x] for x in indices]
+	        else:
+	            # valores = historia[max(long_memoria-retardo-ventana+1, 0):max(long_memoria-retardo+1, 0)]
+	            valores = memoria[-ventana:]
+	        try:
+	            prediccion = int(np.mean(valores))
+	        except:
+	            prediccion = memoria[-1]
+	        if espejo:
+	            prediccion = num_agentes - prediccion
         else:
-            # valores = historia[max(long_memoria-retardo-ventana+1, 0):max(long_memoria-retardo+1, 0)]
-            valores = memoria[-ventana:]
-        try:
-            prediccion = int(np.mean(valores))
-        except:
-            prediccion = memoria[-1]
-        if espejo:
-            prediccion = num_agentes - prediccion
+	        if uniform(0,1) <= umbral:
+	            prediccion = int(umbral*num_agentes - 1) # Decision aleatoria de ir a El Farol con probabilidad umbral
+	        else:
+	            prediccion = int(umbral*num_agentes + 1) # Decide no ir con probabilidad 1 - umbral
         self.prediccion.append(prediccion)
 
     def __str__(self):
         ventana = str(self.ventana)
         ciclico = "ciclico" if self.ciclico else "ventana"
         espejo = "-espejo" if self.espejo else ""
-        return ventana + "-" + ciclico + espejo
+        return ventana + "-" + ciclico + espejo + f"({self.indicador})"
 
 class Agente:
     def __init__(self, estados, scores, vecinos, predictores, predictor_activo):
@@ -55,7 +68,7 @@ class Agente:
         return "E:{0}, S:{1}, V:{2}, P:{3}".format(self.estado, self.score, self.vecinos, str(self.predictor_activo[-1]))
 
 class Bar:
-    def __init__(self, num_agentes, umbral, long_memoria, num_predictores, conectividad, identificador):
+    def __init__(self, num_agentes, umbral, long_memoria, num_predictores, conectividad, identificador, espejos):
         self.num_agentes = num_agentes
         self.umbral = umbral
         self.long_memoria = long_memoria
@@ -65,9 +78,8 @@ class Bar:
         self.historia = []
         self.predictores = []
         for i in range(100):
-            p = Predictor(self.long_memoria + 10)
-            if str(p) not in [str(pr) for pr in self.predictores]:
-                self.predictores.append(p)
+            p = Predictor(self.long_memoria,i,espejos)
+            self.predictores.append(p)
         self.agentes = []
         for i in range(self.num_agentes):
             predictores_agente = sample(self.predictores, self.num_predictores)
@@ -77,6 +89,28 @@ class Bar:
         self.calcular_puntajes() # Encuentra los puntajes de los agentes
         self.actualizar_predicciones() # Predice de acuerdo a la primera asistencia aleatoria
         self.leer_red() # Lee red desde archivo para incluir vecinos
+
+    def leer_red(self):
+        net = {}
+        aux = '-' if self.identificador != '' else ''
+        In = open("data/redes/connlist" + aux + str(self.identificador) + ".dat", "r")
+        for line in In:
+            v = list(map(int, line.split()))
+            if v[0] not in net.keys():
+                net[v[0]] = [v[1]]
+            else:
+                net[v[0]].append(v[1])
+            if v[1] not in net.keys():
+                net[v[1]] = [v[0]]
+            else:
+                net[v[1]].append(v[0])
+        In.close()
+        # print('Red', net)
+        for i in range(len(self.agentes)):
+            try:
+                self.agentes[i].vecinos = net[i]
+            except:
+                self.agentes[i].vecinos = []
 
     def calcular_estados(self):
         for a in self.agentes:
@@ -101,49 +135,43 @@ class Bar:
             else:
                 a.score.append(0)
 
-    def leer_red(self):
-        net = {}
-        aux = '-' if self.identificador != '' else ''
-        In = open("data/redes/connlist" + aux + str(self.identificador) + ".dat", "r")
-        for line in In:
-            v = list(map(int, line.split()))
-            if v[0] not in net.keys():
-                net[v[0]] = [v[1]]
-            else:
-                net[v[0]].append(v[1])
-            if v[1] not in net.keys():
-                net[v[1]] = [v[0]]
-            else:
-                net[v[1]].append(v[0])
-        In.close()
-        # print('Red', net)
-        for i in range(len(self.agentes)):
-            try:
-                self.agentes[i].vecinos = net[i]
-            except:
-                self.agentes[i].vecinos = []
-
     def actualizar_predicciones(self):
         historia = self.historia[-self.long_memoria:]
         # print("Historia para predecir:", historia)
         for p in self.predictores:
-            p.predecir(historia, self.num_agentes)
+            p.predecir(historia, self.num_agentes, self.umbral)
 
-    def actualizar_precision(self):
-        historia = self.historia[-self.long_memoria - 1:]
+    def actualizar_precision_promedio(self):
+        historia = self.historia[-self.long_memoria - 1:]  # por qué el -1 ? Para que historia siempre sea uno más larga que predicciones
         for p in self.predictores:
-            predicciones = p.prediccion[-self.long_memoria:]
+            if self.long_memoria == 0:
+	            p.precision.append(1)
+            else:
+	            predicciones = p.prediccion[-self.long_memoria:]
+	            # print("Historia vs prediccion", historia, predicciones)
+	            precision_historia = np.mean([distancia(historia[i + 1], predicciones[i]) for i in range(len(historia) - 1)])
+	            p.precision.append(precision_historia)
+
+    def actualizar_precision(self, theta=0.7):
+        historia = self.historia
+        for p in self.predictores:
+            predicciones = p.prediccion
+            n = len(predicciones)
             # print("Historia vs prediccion", historia, predicciones)
-            precision_historia = [distancia(historia[i + 1], predicciones[i]) for i in range(len(historia) - 1)]
-            p.precision.append(np.mean(precision_historia))
+            # print("len(historia):", len(historia), " len(predicciones): ", len(predicciones), " n: ", n)
+            if n == 1:
+            	precision_historia = distancia(historia[-1], predicciones[-1])
+            else:
+            	precision_historia = theta*p.precision[-1] + (1-theta)*(distancia(historia[-1], predicciones[-1]))
+            p.precision.append(precision_historia)
 
     def escoger_predictor(self, DEB=False):
         for a in self.agentes:
             precisiones = [p.precision[-1] for p in a.predictores]
             index_min = np.argmin(precisiones)
-            # if DEB:
-            #     print("Las precisiones son:")
-            #     print([f"{str(p)} : {p.precision[-1]}" for p in a.predictores])
+            if DEB:
+                print("Las precisiones son:")
+                print([f"{str(p)} : {p.precision[-1]}" for p in a.predictores])
             a.predictor_activo.append(a.predictores[index_min])
 
     def copiar_a_vecinos(self, agente, DEB=False):
@@ -206,11 +234,8 @@ class Bar:
         self.calcular_asistencia()
         self.calcular_puntajes()
         self.actualizar_precision()
-        # for p in self.predictores:
-        #     print(f"Predictor: {str(p)} - Prediccion: {p.prediccion[-1]} - Precision: {p.precision[-1]}")
-        # print("****************************")
-        self.escoger_predictor(DEB=True)
-        self.agentes_aprenden(ronda=ronda, n=5, DEB=True)
+        self.escoger_predictor(DEB=False)
+        self.agentes_aprenden(ronda=ronda, n=5, DEB=False)
         self.actualizar_predicciones()
 
     def crea_dataframe_agentes(self):
@@ -251,17 +276,24 @@ class Bar:
                      'Estado','Puntaje','Politica','Prediccion', 'Precision']]
         return data
 
-def guardar(dataFrame, archivo, inicial):
-    archivo = "data/" + archivo
+def guardar(dataFrame, archivo, inicial, espejos=True):
+    if espejos:
+    	archivo = "./data/data_todo/" + archivo
+    else:
+    	archivo = "./data/data_sin_espejos/" + archivo
     if inicial:
-        #os.remove(archivo)
-        dataFrame.to_csv(archivo, index = False)
+        try:
+        	remove(archivo)
+        except:
+        	pass
+        with open(archivo, 'w') as f:
+            dataFrame.to_csv(f, header=False, index=False)
     else:
         with open(archivo, 'a') as f:
             dataFrame.to_csv(f, header=False, index=False)
 
-def simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, conectividad, inicial=True, identificador='', DEB=False):
-    bar = Bar(num_agentes, umbral, long_memoria, num_predictores, conectividad, identificador)
+def simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, conectividad, inicial=True, identificador='', espejos=True, DEB=False):
+    bar = Bar(num_agentes, umbral, long_memoria, num_predictores, conectividad, identificador, espejos)
     if DEB:
         print("**********************************")
         print("Agentes iniciales:")
@@ -281,24 +313,25 @@ def simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, c
             for a in bar.agentes:
                 print(a)
     data = bar.crea_dataframe_agentes()
-    guardar(data, 'simulacion-' + str(long_memoria) + '-' + str(num_predictores) + '-' + str(conectividad) +'-no-espejo.csv', inicial)
+    archivo = 'simulacion-' + str(long_memoria) + '-' + str(num_predictores) + '-' + str(conectividad) +'.csv'
+    guardar(data, archivo, inicial, espejos)
+    # print('Datos guardados en ', archivo)
     # guardar(data, 'agentes.csv', inicial)
 
-def correr_sweep(memorias, predictores, conectividades, num_experimentos, num_agentes, umbral, num_rondas, DEB=False):
+def correr_sweep(memorias, predictores, conectividades, num_experimentos, num_agentes, umbral, num_rondas, espejos=True, DEB=False):
     print('********************************')
     print('Corriendo simulaciones...')
     print('********************************')
     print("")
-    inicial = True
     identificador = 0
     for d in memorias:
         for k in predictores:
-            if k <= d:
-                for p in conectividades:
-                    print('Corriendo experimentos con parametros:')
-                    print('Memoria:', d, 'Predictores:', k, 'Conectividad:', p)
-                    for i in range(num_experimentos):
-                        redes.random_graph(num_agentes, p, imagen=False, identificador=identificador)
-                        simulacion(num_agentes, umbral, d, k, num_rondas, p, inicial=inicial, identificador=identificador, DEB=DEB)
-                        identificador += 1
-                        inicial = False
+            for p in conectividades:
+                inicial = True
+                print('Corriendo experimentos con parametros:')
+                print(f"Memoria={d}; Predictores={k}; Conectividad={p}")
+                for i in range(num_experimentos):
+                    redes.random_graph(num_agentes, p, imagen=False, identificador=identificador)
+                    simulacion(num_agentes, umbral, d, k, num_rondas, p, inicial=inicial, identificador=identificador, espejos=espejos, DEB=DEB)
+                    identificador += 1
+                    inicial = False
