@@ -62,7 +62,7 @@ def generar_ejemplo5(id=1):
     di['Puntaje'] = [0,1]*2 + [0]*6 + [1,0]*2 + [0]*6
     return pd.DataFrame(di)
 
-def leer_datos(memorias, predictores, conectividades, espejos=True, verb=True):
+def leer_datos(memorias, predictores, conectividades, espejos=True, verb=True, muchos=False):
     names = ['Memoria', 'Num_predic', 'Identificador', 'Ronda', 'Agente', 'Estado', 'Puntaje', 'Politica', 'Prediccion', 'Precision']
     df_list = []
     for d in memorias:
@@ -70,10 +70,16 @@ def leer_datos(memorias, predictores, conectividades, espejos=True, verb=True):
             for p in conectividades:
                 if verb:
                     print(f"Leyendo datos sweep memoria {d} predictores {k} y conectividad {p}")
-                if espejos:
-                    archivo = './data/data_todo/simulacion-' + str(d) + "-" + str(k) + '-' + str(p) + ".csv"
+                if not muchos:
+                    if espejos:
+                        archivo = '../Data_Farol/normal/data_todo/simulacion-' + str(d) + "-" + str(k) + '-' + str(p) + ".csv"
+                    else:
+                        archivo = '../Data_Farol/normal/data_sin_espejos/simulacion-' + str(d) + "-" + str(k) + '-' + str(p) + ".csv"
                 else:
-                    archivo = './data/data_sin_espejos/simulacion-' + str(d) + "-" + str(k) + '-' + str(p) + ".csv"
+                    if espejos:
+                        archivo = '../Data_Farol/data_todo/simulacion-' + str(d) + "-" + str(k) + '-' + str(p) + ".csv"
+                    else:
+                        archivo = '../Data_Farol/data_sin_espejos/simulacion-' + str(d) + "-" + str(k) + '-' + str(p) + ".csv"
                 if verb:
 	                print(f"Cargando datos de archivo {archivo}...")
                 try:
@@ -130,27 +136,29 @@ def leer_datos(memorias, predictores, conectividades, espejos=True, verb=True):
 	    print("Agente value counts:", data['Agente'].value_counts())
     return data
 
-def leer_datos_aleatorio(probabilidades, conectividades, verb=True):
+def leer_datos_aleatorio(probabilidades, conectividades, num_agentes, verb=True):
     names = ['Identificador', 'Ronda', 'Agente', 'Estado', 'Puntaje']
     df_list = []
-    for d in probabilidades:
-        for p in conectividades:
-            if verb:
-                prob = d.replace('.','_0')
-                print(f"Leyendo datos sweep probabilidad {prob} y conectividad {p}")
-            archivo = './data/data_sin_espejos/simulacion-' + str(d) + "-" + '-' + str(p) + ".csv"
-            if verb:
-                print(f"Cargando datos de archivo {archivo}...")
-            try:
-                aux = pd.read_csv(archivo, names=names, header=None)
-                aux['Prob'] = d
-                aux['Conectividad'] = p
-                # print(aux.head())
-                df_list.append(aux)
+    for n in num_agentes:
+        for d in probabilidades:
+            for p in conectividades:
+                prob = str(d).replace('.','_0')
                 if verb:
-                    print("Listo")
-            except:
-                print(f"Archivo {archivo} no existe! Saltando a siguiente opción")
+                    print(f"Leyendo datos sweep probabilidad {prob}, conectividad {p} y número de agentes {n}")
+                archivo = './data/data_aleatorio/simulacion-' + str(prob) + '-' + str(p) + '-' + str(n) + '.csv'
+                if verb:
+                    print(f"Cargando datos de archivo {archivo}...")
+                try:
+                    aux = pd.read_csv(archivo, names=names, header=None)
+                    aux['Prob'] = d
+                    aux['Conectividad'] = p
+                    aux['Num_agentes'] = n
+                    # print(aux.head())
+                    df_list.append(aux)
+                    if verb:
+                        print("Listo")
+                except:
+                    print(f"Archivo {archivo} no existe! Saltando a siguiente opción")
     if verb:
     	print("Preparando dataframe...")
     data = pd.concat(df_list)
@@ -158,8 +166,9 @@ def leer_datos_aleatorio(probabilidades, conectividades, verb=True):
     	print(data.head())
     try:
         # data = data.dropna()
-        data['Prob'] = data['Memoria'].astype(float)
+        data['Prob'] = data['Prob'].astype(float)
         data['Conectividad'] = data['Conectividad'].astype(float)
+        data['Num_agentes'] = data['Num_agentes'].astype(float)
         data['Identificador'] = data['Identificador'].astype(int)
         data['Ronda'] = data['Ronda'].astype(int)
         data['Agente'] = data['Agente'].astype(int)
@@ -170,18 +179,20 @@ def leer_datos_aleatorio(probabilidades, conectividades, verb=True):
         if verb:
         	print(data.head())
         # data = data.dropna()
-        data['Prob'] = data['Memoria'].astype(float)
+        data['Prob'] = data['Prob'].astype(float)
         data['Conectividad'] = data['Conectividad'].astype(float)
+        data['Num_agentes'] = data['Num_agentes'].astype(float)
         data['Identificador'] = data['Identificador'].astype(int)
         data['Ronda'] = data['Ronda'].astype(int)
         data['Agente'] = data['Agente'].astype(int)
         data['Estado'] = data['Estado'].astype(int)
         data['Puntaje'] = data['Puntaje'].astype(int)
-    data = data[['Prob', 'Conectividad','Identificador','Ronda', 'Agente','Estado','Puntaje','Politica', 'Prediccion', 'Precision']]
+    data = data[['Prob', 'Conectividad','Num_agentes', 'Identificador','Ronda','Agente','Estado','Puntaje']]
     if verb:
 	    print("Shape:", data.shape)
 	    print("Probabilidades value counts:", data['Prob'].value_counts())
 	    print("Conectividades value counts:", data['Conectividad'].value_counts())
+	    print("Num_agentes value counts:", data['Num_agentes'].value_counts())
 	    print("Agente value counts:", data['Agente'].value_counts())
     return data
 
@@ -303,16 +314,25 @@ def encuentra_findex_anterior(df):
         findex.append(1 - TII/MTI)
     return findex #, TII, MTI
 
+def encuentra_precision(df):
+    return df.groupby('Identificador')['Precision'].mean().tolist()
+
 def merge_modelos(df):
     df1 = pd.DataFrame(df[df['Ronda']>int(max(df.Ronda)*.8)])
-    n_agentes = df1.Agente.max() + 1
     modelos = df1.Modelo.unique().tolist()
-    df1['Concurrencia'] = df1.groupby(['Modelo','Identificador','Ronda'])['Estado'].transform(lambda x: np.sum(x)/n_agentes*100)
+    n_agentes = df1.Agente.max() + 1
+    df1['Concurrencia'] = df1.groupby(['Modelo','Identificador','Ronda'])['Estado'].transform('mean')
     m_attendance = df1.groupby(['Modelo','Identificador'])['Concurrencia'].mean().reset_index(name='Attendance')
     sd_attendance = df1.groupby(['Modelo','Identificador'])['Concurrencia'].std().reset_index(name='Deviation')
     data_s = []
-    for mod, grp in df1.groupby('Modelo'):
-        data_s.append(pd.DataFrame({'Efficiency':encuentra_m_efficiency(grp),'Gap':encuentra_gap(grp), 'Gini':encuentra_gini(grp), 'Iniquity':encuentra_findex(grp), 'Identificador':grp['Identificador'].unique().tolist(),'Modelo':mod}))
+    try:
+        a = df1['Precision'].unique()
+        for mod, grp in df1.groupby('Modelo'):
+            data_s.append(pd.DataFrame({'Efficiency':encuentra_m_efficiency(grp),'Gap':encuentra_gap(grp), 'Gini':encuentra_gini(grp), 'Precision':encuentra_precision(grp), 'Iniquity':encuentra_findex(grp), 'Identificador':grp['Identificador'].unique().tolist(),'Modelo':mod}))
+    except:
+        for mod, grp in df1.groupby('Modelo'):
+            data_s.append(pd.DataFrame({'Efficiency':encuentra_m_efficiency(grp),'Gap':encuentra_gap(grp), 'Gini':encuentra_gini(grp),  'Iniquity':encuentra_findex(grp), 'Identificador':grp['Identificador'].unique().tolist(),'Modelo':mod}))
+
     df2 = pd.concat(data_s)
     df2 = pd.merge(df2, m_attendance, on=['Modelo','Identificador'])
     df2 = pd.merge(df2, sd_attendance, on=['Modelo','Identificador'])

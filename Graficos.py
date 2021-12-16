@@ -203,7 +203,11 @@ def comparar_desemp_anterior(df):
 
 def comparacion(df, degrees=0):
     data = P.merge_modelos(df)
-    variables = ['Attendance', 'Deviation', 'Efficiency', 'Gap', 'Gini', 'Iniquity']
+    try:
+        a = data['Precision'].unique()
+        variables = ['Attendance', 'Deviation', 'Efficiency', 'Precision', 'Gini', 'Iniquity']
+    except:
+        variables = ['Attendance', 'Deviation', 'Efficiency', 'Gap', 'Gini', 'Iniquity']        
     fig, ax = plt.subplots(2,3, figsize=(9,6), tight_layout=True)
     for i, v in enumerate(variables):
         f = int(i/3)

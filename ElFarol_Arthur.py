@@ -276,11 +276,17 @@ class Bar:
                      'Estado','Puntaje','Politica','Prediccion', 'Precision']]
         return data
 
-def guardar(dataFrame, archivo, inicial, espejos=True):
-    if espejos:
-    	archivo = "./data/data_todo/" + archivo
+def guardar(dataFrame, archivo, inicial, espejos=True, muchos=False):
+    if not muchos:
+        if espejos:
+        	archivo = "../Data_Farol/normal/data_todo/" + archivo
+        else:
+        	archivo = "../Data_Farol/normal/data_sin_espejos/" + archivo
     else:
-    	archivo = "./data/data_sin_espejos/" + archivo
+        if espejos:
+        	archivo = "../Data_Farol/data_todo/" + archivo
+        else:
+        	archivo = "../Data_Farol/data_sin_espejos/" + archivo
     if inicial:
         try:
         	remove(archivo)
@@ -314,7 +320,10 @@ def simulacion(num_agentes, umbral, long_memoria, num_predictores, num_rondas, c
                 print(a)
     data = bar.crea_dataframe_agentes()
     archivo = 'simulacion-' + str(long_memoria) + '-' + str(num_predictores) + '-' + str(conectividad) +'.csv'
-    guardar(data, archivo, inicial, espejos)
+    if num_agentes < 1000:
+        guardar(data, archivo, inicial, espejos)
+    else:
+        guardar(data, archivo, inicial, espejos, muchos=True)
     # print('Datos guardados en ', archivo)
     # guardar(data, 'agentes.csv', inicial)
 

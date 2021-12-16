@@ -25,7 +25,7 @@ class Bar:
         self.historia = []
         self.agentes = []
         for i in range(self.num_agentes):
-            estado = 1 if randint(0,1) <= probabilidad else 0
+            estado = 1 if uniform(0,1) <= probabilidad else 0
             self.agentes.append(Agente([estado], [], [], probabilidad))
         self.calcular_asistencia() # Encuentra la asistencia al bar
         self.calcular_puntajes() # Encuentra los puntajes de los agentes
@@ -55,7 +55,7 @@ class Bar:
 
     def calcular_estados(self):
         for a in self.agentes:
-            estado = 1 if randint(0,1) <= a.probabilidad else 0
+            estado = 1 if uniform(0,1) <= a.probabilidad else 0
             a.estado.append(estado)
 
     def calcular_asistencia(self):
@@ -198,7 +198,7 @@ def simulacion(num_agentes, umbral, num_rondas, probabilidad, conectividad, inic
             for a in bar.agentes:
                 print(a)
     data = bar.crea_dataframe_agentes()
-    archivo = 'simulacion-' + str(probabilidad) + '-' + str(conectividad)
+    archivo = 'simulacion-' + str(probabilidad) + '-' + str(conectividad) + '-' + str(num_agentes)
     guardar(data, archivo, inicial)
     # print('Datos guardados en ', archivo)
     # guardar(data, 'agentes.csv', inicial)
@@ -209,21 +209,23 @@ def correr_sweep(probabilidades, conectividades, num_experimentos, num_agentes, 
     print('********************************')
     print("")
     identificador = 0
-    for d in probabilidades:
-        for p in conectividades:
-            inicial = True
-            print('Corriendo experimentos con parametros:')
-            print(f"probabilidad={d}; Conectividad={p}")
-            for i in range(num_experimentos):
-                redes.random_graph(num_agentes, p, imagen=False, identificador=identificador)
-                simulacion(num_agentes, umbral, num_rondas, d, p, inicial=inicial, identificador=identificador, DEB=DEB)
-                identificador += 1
-                inicial = False
+    for n in num_agentes:
+        for d in probabilidades:
+            for p in conectividades:
+                inicial = True
+                print('Corriendo experimentos con parametros:')
+                print(f"Probabilidad={d}; Conectividad={p}; Num_agentes={n}")
+                for i in range(num_experimentos):
+                    redes.random_graph(n, p, imagen=False, identificador=identificador)
+                    simulacion(n, umbral, num_rondas, d, p, inicial=inicial, identificador=identificador, DEB=DEB)
+                    identificador += 1
+                    inicial = False
 
-probabilidades = [.2, .3, .4, .5, .6, .7]
+# probabilidades = [.4,.45,.5,.55,.6,.65]
+probabilidades = [0]
 conectividades = [0]
 num_experimentos = 100
-num_agentes = 100
+num_agentes = [100, 500, 1000, 2000]
 umbral = .6
 num_rondas = 100
 correr_sweep(probabilidades, conectividades, num_experimentos, num_agentes, umbral, num_rondas)
